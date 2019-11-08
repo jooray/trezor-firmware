@@ -189,8 +189,6 @@ from .NEMTransactionCommon import NEMTransactionCommon
 from .NEMTransfer import NEMTransfer
 from .PassphraseAck import PassphraseAck
 from .PassphraseRequest import PassphraseRequest
-from .PassphraseStateAck import PassphraseStateAck
-from .PassphraseStateRequest import PassphraseStateRequest
 from .PinMatrixAck import PinMatrixAck
 from .PinMatrixRequest import PinMatrixRequest
 from .Ping import Ping

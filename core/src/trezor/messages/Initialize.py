@@ -16,14 +16,11 @@ class Initialize(p.MessageType):
     def __init__(
         self,
         state: bytes = None,
-        skip_passphrase: bool = None,
     ) -> None:
         self.state = state
-        self.skip_passphrase = skip_passphrase
 
     @classmethod
     def get_fields(cls) -> Dict:
         return {
             1: ('state', p.BytesType, 0),
-            2: ('skip_passphrase', p.BoolType, 0),
         }
