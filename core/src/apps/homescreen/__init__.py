@@ -66,14 +66,13 @@ def get_features() -> Features:
         ]
     f.sd_card_present = io.SDCard().present()
     f.sd_protection = storage.device.get_sd_salt_auth_key() is not None
+    f.state = cache.get_state()
     return f
 
 
 async def handle_Initialize(ctx: wire.Context, msg: Initialize) -> Features:
-    if msg.state is None or msg.state != cache.get_state(prev_state=bytes(msg.state)):
+    if msg.state is None or msg.state != cache.get_state():
         cache.clear()
-        if msg.skip_passphrase:
-            cache.set_passphrase("")
     return get_features()
 
 

@@ -1,18 +1,10 @@
 from micropython import const
 
-from trezor import ui, wire
-from trezor.messages import ButtonRequestType, PassphraseSourceType
-from trezor.messages.ButtonAck import ButtonAck
-from trezor.messages.ButtonRequest import ButtonRequest
+from trezor import wire
 from trezor.messages.PassphraseAck import PassphraseAck
 from trezor.messages.PassphraseRequest import PassphraseRequest
-from trezor.messages.PassphraseStateAck import PassphraseStateAck
-from trezor.messages.PassphraseStateRequest import PassphraseStateRequest
-from trezor.ui.passphrase import CANCELLED, PassphraseKeyboard, PassphraseSource
-from trezor.ui.popup import Popup
-from trezor.ui.text import Text
+from trezor.ui.passphrase import CANCELLED, PassphraseKeyboard
 
-from apps.common import cache
 from apps.common.storage import device as storage_device
 
 if __debug__:
@@ -22,6 +14,7 @@ _MAX_PASSPHRASE_LEN = const(50)
 
 
 async def protect_by_passphrase(ctx: wire.Context) -> str:
+    # TODO: rename to get_passphrase
     if storage_device.has_passphrase():
         return await request_passphrase(ctx)
     else:
@@ -29,59 +22,32 @@ async def protect_by_passphrase(ctx: wire.Context) -> str:
 
 
 async def request_passphrase(ctx: wire.Context) -> str:
-    source = storage_device.get_passphrase_source()
-    if source == PassphraseSourceType.ASK:
-        source = await request_passphrase_source(ctx)
-    passphrase = await request_passphrase_ack(
-        ctx, source == PassphraseSourceType.DEVICE
-    )
-    if len(passphrase) > _MAX_PASSPHRASE_LEN:
-        raise wire.DataError("Maximum passphrase length is %d" % _MAX_PASSPHRASE_LEN)
-    return passphrase
-
-
-async def request_passphrase_source(ctx: wire.Context) -> int:
-    req = ButtonRequest(code=ButtonRequestType.PassphraseType)
-    await ctx.call(req, ButtonAck)
-
-    text = Text("Enter passphrase", ui.ICON_CONFIG)
-    text.normal("Where do you want to", "enter your passphrase?")
-    source = PassphraseSource(text)
-
-    response = await ctx.wait(source)
-    assert isinstance(response, int)
-    return response
-
-
-async def request_passphrase_ack(ctx: wire.Context, on_device: bool) -> str:
-    if not on_device:
-        text = Text("Passphrase entry", ui.ICON_CONFIG)
-        text.normal("Please type your", "passphrase on the", "connected host.")
-        await Popup(text)
-
-    passphrase_request = PassphraseRequest(on_device=on_device)
-    ack = await ctx.call(passphrase_request, PassphraseAck)
-
-    if on_device:
-        if ack.passphrase is not None:
+    request = PassphraseRequest()
+    ack = await ctx.call(request, PassphraseAck)
+    if ack.on_device:
+        if ack.passphrase:
             raise wire.ProcessError("Passphrase provided when it should not be")
-
-        keyboard = PassphraseKeyboard("Enter passphrase", _MAX_PASSPHRASE_LEN)
-        if __debug__:
-            passphrase = await ctx.wait(keyboard, input_signal())
-        else:
-            passphrase = await ctx.wait(keyboard)
-        if passphrase is CANCELLED:
-            raise wire.ActionCancelled("Passphrase cancelled")
+        passphrase = await request_passphrase_on_device(ctx)
     else:
-        if ack.passphrase is None:
+        if not ack.passphrase:
             raise wire.ProcessError("Passphrase not provided")
         passphrase = ack.passphrase
 
-    assert isinstance(passphrase, str)
+    if len(passphrase) > _MAX_PASSPHRASE_LEN:
+        raise wire.DataError("Maximum passphrase length is %d" % _MAX_PASSPHRASE_LEN)
 
-    state = cache.get_state(prev_state=ack.state, passphrase=passphrase)
-    state_request = PassphraseStateRequest(state=state)
-    await ctx.call(state_request, PassphraseStateAck)
+    return passphrase
+
+
+async def request_passphrase_on_device(ctx: wire.Context) -> str:
+    keyboard = PassphraseKeyboard("Enter passphrase", _MAX_PASSPHRASE_LEN)
+    if __debug__:
+        passphrase = await ctx.wait(keyboard, input_signal())
+    else:
+        passphrase = await ctx.wait(keyboard)
+    if passphrase is CANCELLED:
+        raise wire.ActionCancelled("Passphrase entry cancelled")
+
+    assert isinstance(passphrase, str)
 
     return passphrase
