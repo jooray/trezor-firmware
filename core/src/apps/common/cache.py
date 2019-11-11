@@ -1,6 +1,4 @@
-from trezor.crypto import hashlib, hmac, random
-
-from apps.common.storage.device import get_device_id
+from trezor.crypto import random
 
 if False:
     from typing import Optional
@@ -16,6 +14,9 @@ def get_state() -> Optional[bytes]:
     global _cached_state
     if not _cached_state:
         _cached_state = random.bytes(32)
+        print("setting state to: ", _cached_state)
+    else:
+        print("retrieving state: ", _cached_state)
     return _cached_state
     #
     # if passphrase is None:
@@ -59,14 +60,15 @@ def set_seed_without_passphrase(seed: Optional[bytes]) -> None:
 def set_passphrase(passphrase: Optional[str]) -> None:
     global _cached_passphrase, _cached_passphrase_fprint
     _cached_passphrase = passphrase
-    _cached_passphrase_fprint = _compute_state(b"FPRINT", passphrase or "")[:4]  # TODO!
+    print("setting passphrase in cache: ", passphrase)
+    # _cached_passphrase_fprint = _compute_state(b"FPRINT", passphrase or "")[:4]  # TODO!
 
 
-def clear(keep_passphrase: bool = False) -> None:
+def clear() -> None:
+    print("clearing state")
     global _cached_state
     _cached_state = None
 
     set_seed(None)
     set_seed_without_passphrase(None)
-    if not keep_passphrase:
-        set_passphrase(None)
+    set_passphrase(None)

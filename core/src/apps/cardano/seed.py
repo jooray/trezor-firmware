@@ -28,7 +28,7 @@ class Keychain:
         return node
 
 
-async def _get_passphrase(ctx: wire.Context) -> bytes:
+async def _get_passphrase(ctx: wire.Context) -> str:
     passphrase = cache.get_passphrase()
     if passphrase is None:
         passphrase = await protect_by_passphrase(ctx)

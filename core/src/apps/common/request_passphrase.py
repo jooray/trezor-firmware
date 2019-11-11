@@ -25,11 +25,11 @@ async def request_passphrase(ctx: wire.Context) -> str:
     request = PassphraseRequest()
     ack = await ctx.call(request, PassphraseAck)
     if ack.on_device:
-        if ack.passphrase:
+        if ack.passphrase is not None:
             raise wire.ProcessError("Passphrase provided when it should not be")
         passphrase = await request_passphrase_on_device(ctx)
     else:
-        if not ack.passphrase:
+        if ack.passphrase is None:
             raise wire.ProcessError("Passphrase not provided")
         passphrase = ack.passphrase
 

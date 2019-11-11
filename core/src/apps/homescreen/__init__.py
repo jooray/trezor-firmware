@@ -72,6 +72,10 @@ def get_features() -> Features:
 
 async def handle_Initialize(ctx: wire.Context, msg: Initialize) -> Features:
     if msg.state is None or msg.state != cache.get_state():
+        if msg.state is None:
+            print("msg.state is None")
+        elif msg.state != cache.get_state():
+            print("msg.state does not match cache.get_state(): %x vs %x", msg.state[:5], cache.get_state()[:5])
         cache.clear()
     return get_features()
 
@@ -85,7 +89,7 @@ async def handle_Cancel(ctx: wire.Context, msg: Cancel) -> NoReturn:
 
 
 async def handle_ClearSession(ctx: wire.Context, msg: ClearSession) -> Success:
-    cache.clear(keep_passphrase=True)
+    cache.clear()
     return Success(message="Session cleared")
 
 
@@ -96,7 +100,7 @@ async def handle_Ping(ctx: wire.Context, msg: Ping) -> Success:
         from trezor.ui.text import Text
 
         await require_confirm(ctx, Text("Confirm"), ProtectCall)
-    if msg.passphrase_protection:
+    if msg.passphrase_protection:  # TODO
         from apps.common.request_passphrase import protect_by_passphrase
 
         await protect_by_passphrase(ctx)
